@@ -1,0 +1,55 @@
+name: Test, Build and Deploy Production
+on:
+  release:
+    types: [released]
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Latest Version
+        uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '15.x'
+      - name: Cache Node Modules
+        id: test-npm
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-v15-${{ hashFiles('package-lock.json') }}
+      - name: Install All Dependencies
+        if: steps.test-npm.outputs.cache-hit != 'true'
+        run: npm install
+      - name: Run Tests
+        run: npm test
+      - name: Run Linter
+        run: npm run lint
+  build:
+    name: build
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Latest Version
+        uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '15.x'
+      - name: Load Cached Node Modules
+        id: test-npm
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-v15-${{ hashFiles('package-lock.json') }}
+      - name: Cache Build
+        id: build-dist
+        uses: actions/cache@v2
+        with:
+          path: dist
+          key: ${{ runner.os }}-v15-${{ hashFiles('dist/**/*') }}
+      - name: Build Application
+        run: npm run build
+      - name: Minify Application
+        run: npm run minify
